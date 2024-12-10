@@ -1,0 +1,11 @@
+dash~=2.18.2
+dash-bootstrap-components~=1.6.0
+plotly~=5.24.1
+pandas~=2.2.3
+python-binance
+streamlit~=1.40.2
+websocket-client
+
+prophet~=1.1.6
+numpy~=2.1.3
+streamlit-aggrid~=1.0.5
