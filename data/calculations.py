@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
+
 
 def calculate_returns(df):
     """
@@ -163,7 +165,6 @@ def generate_advanced_recommendations(data_dict, rsi_thresholds=(30, 70), volume
             recommendations.append(f"{pair}: Ошибка в расчётах - {str(e)}")
     return recommendations
 
-
 def calculate_var(data, confidence_level=0.95):
     """
     Рассчитать Value at Risk (VaR) для заданного уровня доверия.
@@ -183,7 +184,6 @@ def calculate_var(data, confidence_level=0.95):
 
     # Рассчитываем VaR
     return np.percentile(data['daily_return'].dropna(), (1 - confidence_level) * 100)
-
 
 def calculate_atr(data, window=14):
     """
@@ -209,7 +209,6 @@ def calculate_atr(data, window=14):
 
     data['ATR'] = data['TR'].rolling(window=window).mean()
     return data
-
 
 def calculate_bollinger_bands(data, window=20):
     """
@@ -291,7 +290,6 @@ def monte_carlo_simulation(data, num_simulations=1000, num_days=30):
 
     return pd.DataFrame(simulated_prices)
 
-
 def bayesian_update(prior, likelihood, evidence):
     """
     Обновляет апостериорную вероятность с использованием Байесовской теоремы.
@@ -306,7 +304,6 @@ def bayesian_update(prior, likelihood, evidence):
     """
     posterior = (likelihood * prior) / evidence
     return posterior
-
 
 def calculate_bayes_laplace(data, probabilities):
     """
@@ -323,7 +320,6 @@ def calculate_bayes_laplace(data, probabilities):
         raise ValueError("Количество вероятностей должно совпадать с количеством сценариев.")
     return data.dot(probabilities)
 
-
 def calculate_savage(data):
     """
     Рассчитывает критерий Сэвиджа для набора данных.
@@ -336,7 +332,6 @@ def calculate_savage(data):
     """
     regret_matrix = data.max(axis=0) - data
     return regret_matrix.max(axis=1)
-
 
 def calculate_hurwicz(data, alpha=0.5):
     """
@@ -352,6 +347,89 @@ def calculate_hurwicz(data, alpha=0.5):
     if not (0 <= alpha <= 1):
         raise ValueError("Коэффициент оптимизма должен быть в диапазоне от 0 до 1.")
     return alpha * data.max(axis=1) + (1 - alpha) * data.min(axis=1)
+
+def calculate_sharpe_ratio(data, risk_free_rate=0.01):
+    """
+    Расчет коэффициента Шарпа для оценки риска и доходности.
+
+    :param data: DataFrame с колонкой 'daily_return'.
+    :param risk_free_rate: Безрисковая ставка доходности (по умолчанию 1%).
+    :return: Sharpe Ratio.
+    """
+    if 'daily_return' not in data:
+        data['daily_return'] = data['close'].pct_change()  # Расчет дневной доходности
+    excess_return = data['daily_return'].mean() - risk_free_rate
+    return excess_return / data['daily_return'].std()
+
+def generate_trend_recommendations(data):
+    """
+    Генерация рекомендаций на основе трендов SMA и EMA.
+
+    :param data: DataFrame с колонками 'SMA' и 'EMA'.
+    :return: Список рекомендаций.
+    """
+    recommendations = []
+    if data['EMA'].iloc[-1] > data['SMA'].iloc[-1]:
+        recommendations.append("Текущий тренд восходящий. Рекомендуется покупка.")
+    else:
+        recommendations.append("Текущий тренд нисходящий. Рассмотрите продажу.")
+    return recommendations
+
+def highlight_risk_zones(data, title="Зоны риска"):
+    """
+    Создает график с выделенными зонами высокого и низкого риска.
+    """
+    fig = go.Figure()
+
+    # Основной график цен
+    fig.add_trace(go.Scatter(
+        x=data["open_time"],
+        y=data["close"],
+        mode="lines",
+        name="Цена",
+        line=dict(color="blue")
+    ))
+
+    # Маска для зоны высокого риска
+    high_risk_mask = data["volatility"] > data["volatility"].mean()
+
+    # Зона высокого риска
+    fig.add_trace(go.Scatter(
+        x=data["open_time"][high_risk_mask],
+        y=data["close"][high_risk_mask],
+        mode="markers",
+        marker=dict(color="red", size=5),
+        name="Высокий риск"
+    ))
+
+    # Зона низкого риска
+    fig.add_trace(go.Scatter(
+        x=data["open_time"][~high_risk_mask],
+        y=data["close"][~high_risk_mask],
+        mode="markers",
+        marker=dict(color="green", size=5),
+        name="Низкий риск"
+    ))
+
+    # Настройка графика
+    fig.update_layout(
+        title=title,
+        xaxis_title="Дата",
+        yaxis_title="Цена",
+        template="plotly_white"
+    )
+
+    return fig
+
+def detect_trends(data):
+    """
+    Определяет восходящие и нисходящие тренды на основе EMA.
+    Возвращает DataFrame с колонкой 'trend' (up/down).
+    """
+    data["trend"] = "stable"
+    data.loc[data["close"] > data["EMA"], "trend"] = "up"
+    data.loc[data["close"] < data["EMA"], "trend"] = "down"
+    return data
 
 def calculate_bayesian_probabilities(data, threshold=0.01):
     """

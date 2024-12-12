@@ -212,28 +212,54 @@ def plot_monte_carlo(simulated_prices, title="Моделирование мет�
     )
     return fig
 
-def plot_bayesian_probabilities(probabilities, title="Байесовское обновление вероятностей"):
-    """
-    Строит диаграмму вероятностей.
 
-    Параметры:
-    - probabilities (dict): Вероятности (например, {"up": 0.6, "down": 0.4}).
-    - title (str): Заголовок графика.
+def plot_criteria_results(criteria_results, title="Риск и доходность"):
+    """
+    Визуализация результатов критериев Байеса-Лапласа, Сэвиджа и Гурвица.
+
+    Аргументы:
+    - criteria_results: словарь с результатами критериев.
+    - title: заголовок графика.
 
     Возвращает:
-    - fig (Figure): График Plotly.
+    - fig: интерактивный график.
     """
-    labels = list(probabilities.keys())
-    values = list(probabilities.values())
+    fig = go.Figure()
 
-    fig = px.pie(
-        names=labels,
-        values=values,
+    for criterion, values in criteria_results.items():
+        fig.add_trace(go.Bar(
+            x=list(values.keys()),
+            y=list(values.values()),
+            name=criterion
+        ))
+
+    fig.update_layout(
         title=title,
-        color=labels,
-        color_discrete_map={"up": "green", "down": "red"}
+        xaxis_title="Альтернативы",
+        yaxis_title="Значения",
+        barmode="group",
+        template="plotly_white",
+        xaxis=dict(
+            showgrid=True,
+            title="Альтернативы",
+            tickangle=45,
+            tickfont=dict(size=10),
+            fixedrange=False  # Отключает фиксированный масштаб
+        ),
+        yaxis=dict(
+            showgrid=True,
+            title="Значения",
+            fixedrange=False  # Отключает фиксированный масштаб
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
     )
-    fig.update_traces(textinfo="percent+label")
+
     return fig
 
 def plot_long_short(data_long, data_short, pair):
@@ -289,6 +315,36 @@ def plot_long_short(data_long, data_short, pair):
     return fig
 
 
+def plot_bayesian_probabilities(probabilities, title="Байесовские вероятности"):
+    """
+    Визуализация байесовских вероятностей.
+
+    :param probabilities: Словарь вероятностей {'label': value}.
+    :param title: Заголовок графика.
+    :return: Объект Plotly Figure.
+    """
+    # Разделение словаря на метки и значения
+    labels = list(probabilities.keys())
+    values = list(probabilities.values())
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=labels,
+        y=values,
+        name="Вероятности",
+        marker_color="blue"
+    ))
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Категории",
+        yaxis_title="Вероятность",
+        template="plotly_white",
+        showlegend=False
+    )
+
+    return fig
+
 def plot_criteria_results(criteria_results, title="Результаты оценки"):
     """
     Построение графика результатов различных критериев.
@@ -317,6 +373,73 @@ def plot_criteria_results(criteria_results, title="Результаты оцен
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     return fig
+
+
+def plot_risk_zones(data, atr_threshold):
+    """
+    Построение графика с зонами риска на основе ATR.
+
+    :param data: DataFrame с данными.
+    :param atr_threshold: Пороговое значение ATR для определения зон риска.
+    :return: График Plotly.
+    """
+    import plotly.graph_objects as go
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=data['open_time'], y=data['close'], mode='lines', name='Цена'))
+
+    # Добавляем зоны риска
+    high_risk = data['ATR'] > atr_threshold
+    fig.add_trace(go.Scatter(
+        x=data.loc[high_risk, 'open_time'],
+        y=data.loc[high_risk, 'close'],
+        mode='markers',
+        marker=dict(color='red', size=6),
+        name='Высокий риск'
+    ))
+
+    fig.update_layout(
+        title="Зоны риска на основе ATR",
+        xaxis_title="Дата",
+        yaxis_title="Цена",
+        template="plotly_white"
+    )
+    return fig
+
+def plot_trends(data, title="Анализ трендов"):
+    """
+    Отображает график цен с цветовым выделением трендов.
+    """
+    fig = go.Figure()
+
+    # Восходящий тренд
+    up_trend = data[data["trend"] == "up"]
+    fig.add_trace(go.Scatter(
+        x=up_trend["open_time"],
+        y=up_trend["close"],
+        mode="lines",
+        line=dict(color="green"),
+        name="Восходящий тренд"
+    ))
+
+    # Нисходящий тренд
+    down_trend = data[data["trend"] == "down"]
+    fig.add_trace(go.Scatter(
+        x=down_trend["open_time"],
+        y=down_trend["close"],
+        mode="lines",
+        line=dict(color="red"),
+        name="Нисходящий тренд"
+    ))
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Дата",
+        yaxis_title="Цена",
+        template="plotly_white"
+    )
+    return fig
+
 
 def display_table(data, title="Таблица данных"):
     """Отображение таблицы данных."""

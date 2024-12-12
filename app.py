@@ -1,16 +1,43 @@
+import numpy as np
 import pandas as pd
 import streamlit as st
+from pygments.lexers import go
+from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
 from data.api import get_historical_data
 from data.calculations import (
     generate_advanced_recommendations, calculate_moving_averages,
     calculate_var, calculate_atr, calculate_bollinger_bands, calculate_correlation_matrix, monte_carlo_simulation,
-    calculate_bayesian_probabilities, calculate_bayes_laplace, calculate_savage, calculate_hurwicz
+    calculate_bayesian_probabilities, calculate_bayes_laplace, calculate_savage, calculate_hurwicz, calculate_returns,
+    calculate_sharpe_ratio, generate_trend_recommendations, highlight_risk_zones, detect_trends
 )
 from data.visualization import (
     plot_price_and_volume_optimized, plot_comparison, display_table,
-    plot_bollinger_bands, plot_correlation_matrix, plot_monte_carlo, plot_bayesian_probabilities, plot_long_short,
-    plot_criteria_results
+    plot_bollinger_bands, plot_correlation_matrix, plot_monte_carlo, plot_long_short,
+    plot_criteria_results, plot_bayesian_probabilities, plot_risk_zones, plot_trends
 )
+
+
+
+def normalize_criteria_results(criteria_results):
+    """
+    Нормализация результатов критериев для корректного отображения.
+
+    :param criteria_results: Словарь с результатами критериев.
+    :return: Нормализованный DataFrame.
+    """
+    scaler = MinMaxScaler()
+
+    # Преобразование словаря в DataFrame для нормализации
+    df = pd.DataFrame(criteria_results)
+
+    # Применяем MinMaxScaler для нормализации
+    normalized_values = scaler.fit_transform(df)
+
+    # Создаем новый DataFrame с нормализованными значениями
+    normalized_df = pd.DataFrame(normalized_values, columns=df.columns, index=df.index)
+
+    return normalized_df
 
 def load_custom_css():
     """Загрузка пользовательского CSS для улучшения визуального оформления."""
@@ -102,12 +129,47 @@ with tab2:
     if data_dict:
         for pair, data in data_dict.items():
             st.subheader(f"Графики для {pair}")
+
+            # Генерируем единый график для синхронизации
             fig = plot_price_and_volume_optimized(
                 data, interval=interval,
                 sma_window=sma_window, ema_window=ema_window,
                 chart_type=selected_chart_type
             )
+            # Отображаем график
             st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True})
+
+            # Описание
+            st.markdown(f"""
+                       **Описание для {pair}:**
+                       - Верхний график: отображает цены с выбранным типом отображения (линейный, свечной, баровый).
+                       - Нижний график: объемы отображаются отдельно.
+                       - **SMA (Simple Moving Average):** Скользящее среднее для определения тренда.
+                       - **EMA (Exponential Moving Average):** Экспоненциальное скользящее среднее для более точного анализа.
+                       """)
+
+            # Рассчитываем волатильность
+            data["volatility"] = data["close"].pct_change().rolling(window=14).std()
+
+            # Риск-зоны
+            st.subheader(f"Зоны риска для {pair}")
+            fig_risk = highlight_risk_zones(data, title=f"Зоны риска для {pair}")
+            st.plotly_chart(fig_risk, use_container_width=True)
+
+            # Анализ трендов
+            data = detect_trends(data)
+            st.subheader(f"Анализ трендов для {pair}")
+            fig_trends = plot_trends(data, title=f"Анализ трендов для {pair}")
+            st.plotly_chart(fig_trends, use_container_width=True)
+
+            # Рекомендации
+            st.write("**Рекомендации:**")
+            if data["trend"].iloc[-1] == "up":
+                st.write(f"Для {pair}: восходящий тренд. Рекомендуется держать или увеличить инвестиции.")
+            elif data["trend"].iloc[-1] == "down":
+                st.write(f"Для {pair}: нисходящий тренд. Рекомендуется уменьшить долю или зафиксировать прибыль.")
+            else:
+                st.write(f"Для {pair}: стабильный тренд. Нет необходимости в изменении позиции.")
     else:
         st.warning("Данные не загружены. Пожалуйста, выберите активы и нажмите 'Загрузить данные'.")
 
@@ -135,6 +197,13 @@ with tab3:
             except KeyError as e:
                 st.warning(f"Не удалось рассчитать VaR для {pair}: {str(e)}")
 
+            # Sharpe Ratio
+            sharpe_ratio = calculate_sharpe_ratio(data)
+            st.write(f"Sharpe Ratio: {sharpe_ratio:.2f}")
+
+            # Зоны риска
+            fig_risk_zones = plot_risk_zones(data, atr_threshold=0.02)  # Порог можно регулировать
+            st.plotly_chart(fig_risk_zones, use_container_width=True)
             # Рассчитываем и строим Bollinger Bands
             try:
                 if 'BB_upper' not in data.columns or 'BB_middle' not in data.columns or 'BB_lower' not in data.columns:
@@ -144,6 +213,7 @@ with tab3:
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
                 st.warning(f"Не удалось построить Bollinger Bands для {pair}: {str(e)}")
+
     else:
         st.warning("Данные не загружены. Выберите активы и нажмите 'Загрузить данные'.")
 
@@ -270,37 +340,59 @@ with tab7:
 with tab8:  # "Риск и доходность"
     st.header("Риск и доходность")
     if data_dict:
-        # Пример матрицы выплат
-        data = pd.DataFrame({
-            "Сценарий 1": [10, 5, 0],
-            "Сценарий 2": [7, 8, 6],
-            "Сценарий 3": [4, 6, 9]
-        }, index=["Альтернатива 1", "Альтернатива 2", "Альтернатива 3"])
+        for pair, data in data_dict.items():
+            st.subheader(f"Оценка риска и доходности для {pair}")
 
-        probabilities = [0.4, 0.35, 0.25]
+            if "daily_return" not in data:
+                data = calculate_returns(data)
 
-        # Расчет критериев
-        bayes_results = calculate_bayes_laplace(data, probabilities)
-        savage_results = calculate_savage(data)
-        hurwicz_results = calculate_hurwicz(data, alpha=0.5)
+            if data["daily_return"].dropna().empty:
+                st.warning(f"Недостаточно данных для расчета риска и доходности для {pair}.")
+                continue
 
-        # Визуализация
-        criteria_results = {
-            "Байес-Лаплас": bayes_results,
-            "Сэвидж": savage_results,
-            "Гурвиц (α=0.5)": hurwicz_results
-        }
+            payout_matrix = pd.DataFrame(
+                {
+                    f"Сценарий {i+1}": data["daily_return"].dropna().tail(10).sample(10, replace=True).values
+                    for i in range(10)
+                },
+                index=[f"Альтернатива {i+1}" for i in range(10)]
+            )
 
-        fig = plot_criteria_results(criteria_results, title="Риск и доходность")
-        st.plotly_chart(fig, use_container_width=True)
+            probabilities = np.random.dirichlet(np.ones(10), size=1)[0]
+
+            bayes_results = calculate_bayes_laplace(payout_matrix, probabilities)
+            savage_results = calculate_savage(payout_matrix)
+            hurwicz_results = calculate_hurwicz(payout_matrix, alpha=0.5)
+
+            criteria_results = {
+                "Байес-Лаплас": bayes_results,
+                "Сэвидж": savage_results,
+                "Гурвиц (α=0.5)": hurwicz_results
+            }
+
+            # Нормализация критериев
+            criteria_results_normalized = normalize_criteria_results(criteria_results)
+
+            fig = plot_criteria_results(criteria_results_normalized, title=f"Риск и доходность для {pair}")
+            st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True})
+
+            st.markdown("""
+            **Описание:**
+            - **Байес-Лаплас**: оценивает средние выплаты по вероятностям.
+            - **Сэвидж**: минимизирует максимальные потери.
+            - **Гурвиц**: баланс между оптимизмом и пессимизмом.
+            """)
     else:
-        st.warning("Данные для оценки не загружены.")
-# Вкладка "Рекомендации"
-with tab9:
+        st.warning("Данные для оценки не загружены. Выберите активы и нажмите 'Загрузить данные'.")
+
+
+with tab9:  # "Рекомендации"
     st.header("Рекомендации")
     if data_dict:
-        recommendations = generate_advanced_recommendations(data_dict)
-        for rec in recommendations:
-            st.markdown(f"- {rec}")
+        for pair, data in data_dict.items():
+            recommendations = generate_trend_recommendations(data)
+            st.subheader(f"Рекомендации для {pair}")
+            for rec in recommendations:
+                st.markdown(f"- {rec}")
     else:
         st.warning("Данные не загружены. Выберите активы и нажмите 'Загрузить данные'.")
