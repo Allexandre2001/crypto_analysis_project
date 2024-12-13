@@ -2,6 +2,18 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+def clean_data(df):
+    """
+    Удаляет ненужные колонки и оставляет только ключевые: open_time, open, high, low, close, volume.
+
+    Параметры:
+    df (pd.DataFrame): Исходный DataFrame с данными актива.
+
+    Возвращает:
+    pd.DataFrame: Очищенный DataFrame.
+    """
+    columns_to_keep = ["open_time", "open", "high", "low", "close", "volume"]
+    return df[columns_to_keep]
 
 def calculate_returns(df):
     """
@@ -52,16 +64,20 @@ def calculate_moving_averages(df, window=14):
     Рассчитывает скользящие средние (SMA, EMA).
 
     Параметры:
-    df (DataFrame): Данные актива с колонкой "close".
+    df (DataFrame): Данные актива с колонкой 'close'.
     window (int): Период для расчёта SMA и EMA.
 
     Возвращает:
-    DataFrame: Обновлённый DataFrame с колонками "SMA" и "EMA".
+    DataFrame: Обновлённый DataFrame с колонками 'SMA' и 'EMA'.
     """
-    if df.empty or "close" not in df:
-        raise ValueError("Данные отсутствуют или не содержат колонку 'close'.")
-    df["SMA"] = df["close"].rolling(window=window).mean()
-    df["EMA"] = df["close"].ewm(span=window, adjust=False).mean()
+    if 'close' not in df.columns:
+        raise KeyError("Колонка 'close' отсутствует в данных.")
+
+    # Расчёт SMA
+    df['SMA'] = df['close'].rolling(window=window).mean()
+    # Расчёт EMA
+    df['EMA'] = df['close'].ewm(span=window, adjust=False).mean()
+
     return df
 
 def calculate_sharpe_ratio(df, risk_free_rate=0.01):
@@ -209,6 +225,59 @@ def calculate_atr(data, window=14):
 
     data['ATR'] = data['TR'].rolling(window=window).mean()
     return data
+
+def process_indicators(data_dict, pair, atr_window=14, bollinger_window=20):
+    """
+    Расчет индикаторов для заданной криптовалютной пары и обновление данных.
+
+    Параметры:
+    data_dict (dict): Словарь с данными для каждой пары.
+    pair (str): Название пары (например, BTCUSDT).
+    atr_window (int): Период для расчета ATR.
+    bollinger_window (int): Период для полос Боллинджера.
+
+    Возвращает:
+    dict: Обновленные данные с рассчитанными индикаторами.
+    """
+    data = data_dict.get(pair)
+
+    if data is None or data.empty:
+        raise ValueError(f"Данные для {pair} отсутствуют или пусты.")
+
+    # Очистка данных (если требуется)
+    columns_needed = ["open_time", "open", "high", "low", "close", "volume"]
+    data = data[columns_needed]
+
+    # Расчет ATR
+    if "ATR" not in data.columns:
+        data = calculate_atr(data, window=atr_window)
+
+    # Расчет VaR
+    if "daily_return" not in data.columns:
+        data["daily_return"] = data["close"].pct_change()
+    var_95 = calculate_var(data)
+
+    # Расчет Sharpe Ratio
+    sharpe_ratio = calculate_sharpe_ratio(data)
+
+    # Полосы Боллинджера
+    if not {"BB_upper", "BB_middle", "BB_lower"}.issubset(data.columns):
+        data = calculate_bollinger_bands(data, window=bollinger_window)
+
+    # Добавление индикаторов обратно в словарь
+    data_dict[pair] = data
+
+    return {
+        "ATR_mean": data["ATR"].mean(),
+        "VaR_95": var_95,
+        "Sharpe_Ratio": sharpe_ratio,
+        "Bollinger_Bands": {
+            "upper": data["BB_upper"].iloc[-1],
+            "middle": data["BB_middle"].iloc[-1],
+            "lower": data["BB_lower"].iloc[-1]
+        }
+    }
+
 
 def calculate_bollinger_bands(data, window=20):
     """
@@ -369,11 +438,24 @@ def generate_trend_recommendations(data):
     :return: Список рекомендаций.
     """
     recommendations = []
+
+    # Проверяем наличие колонок 'EMA' и 'SMA'
+    if 'EMA' not in data.columns or 'SMA' not in data.columns:
+        # Рассчитываем EMA и SMA, если их нет
+        data = calculate_moving_averages(data, window=14)  # Период можно настроить
+
+    # Проверяем, что колонки появились
+    if 'EMA' not in data.columns or 'SMA' not in data.columns:
+        raise KeyError("Колонки 'EMA' или 'SMA' отсутствуют. Убедитесь, что они рассчитаны перед вызовом.")
+
+    # Генерация рекомендаций
     if data['EMA'].iloc[-1] > data['SMA'].iloc[-1]:
         recommendations.append("Текущий тренд восходящий. Рекомендуется покупка.")
     else:
         recommendations.append("Текущий тренд нисходящий. Рассмотрите продажу.")
+
     return recommendations
+
 
 def highlight_risk_zones(data, title="Зоны риска"):
     """

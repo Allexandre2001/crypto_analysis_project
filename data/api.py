@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import os
 import logging
 
+from data.calculations import clean_data
+
 # 1. Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
@@ -79,24 +81,11 @@ def fetch_real_time_data(ws):
         logger.error(f"Ошибка при получении данных в реальном времени: {e}")
         return None  # Возвращаем None при ошибке
 
-# 6. Пример использования
-if __name__ == "__main__":
-    # Пример работы с историческими данными
-    symbol = "BTCUSDT"
-    interval = "1d"
-    start = "30 days ago UTC"
-    historical_data = get_historical_data(symbol, interval, start)
-    if not historical_data.empty:
-        print(historical_data.head())
-    else:
-        logger.warning("Исторические данные не получены.")
-
-    # Пример работы с WebSocket
-    ws = connect_websocket(symbol, interval="1m")
-    if ws:
-        for _ in range(5):  # Получение 5 обновлений
-            data = fetch_real_time_data(ws)
-            if data:
-                print(data)
-        ws.close()
-        logger.info("Соединение с WebSocket закрыто.")
+def get_historical_data_cleaned(symbol, interval="1d", start_str="30 days ago UTC"):
+    """
+    Получение исторических данных с очисткой.
+    """
+    raw_data = get_historical_data(symbol, interval, start_str)
+    if raw_data.empty:
+        return pd.DataFrame()  # Возвращаем пустой DataFrame при ошибке
+    return clean_data(raw_data)

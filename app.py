@@ -9,7 +9,8 @@ from data.calculations import (
     generate_advanced_recommendations, calculate_moving_averages,
     calculate_var, calculate_atr, calculate_bollinger_bands, calculate_correlation_matrix, monte_carlo_simulation,
     calculate_bayesian_probabilities, calculate_bayes_laplace, calculate_savage, calculate_hurwicz, calculate_returns,
-    calculate_sharpe_ratio, generate_trend_recommendations, highlight_risk_zones, detect_trends
+    calculate_sharpe_ratio, generate_trend_recommendations, highlight_risk_zones, detect_trends, clean_data,
+    process_indicators
 )
 from data.visualization import (
     plot_price_and_volume_optimized, plot_comparison, display_table,
@@ -119,7 +120,9 @@ with tab1:
     st.header("Данные активов")
     if data_dict:
         for pair, data in data_dict.items():
-            display_table(data, title=f"Данные для {pair}")
+            # Очистка данных перед отображением
+            cleaned_data = clean_data(data)
+            display_table(cleaned_data, title=f"Данные для {pair}")
     else:
         st.warning("Данные не загружены. Выберите активы и нажмите 'Загрузить данные'.")
 
@@ -178,44 +181,28 @@ with tab3:
     st.header("Индикаторы риска и волатильности")
     if data_dict:
         for pair, data in data_dict.items():
-            st.subheader(f"Индикаторы для {pair}")
-
-            # Рассчитываем ATR
-            if 'ATR' not in data.columns:
-                data = calculate_atr(data, window=14)  # Период ATR по умолчанию равен 14
-                data_dict[pair] = data  # Обновляем данные
-            if 'ATR' in data.columns:
-                avg_atr = data['ATR'].mean()
-                st.write(f"Средний ATR (14 дней): {avg_atr:.2f}")
-            else:
-                st.warning(f"Не удалось рассчитать ATR для {pair}.")
-
-            # Рассчитываем VaR
             try:
-                var_95 = calculate_var(data)
-                st.write(f"Value at Risk (95%): {var_95:.2%}")
-            except KeyError as e:
-                st.warning(f"Не удалось рассчитать VaR для {pair}: {str(e)}")
+                st.subheader(f"Индикаторы для {pair}")
 
-            # Sharpe Ratio
-            sharpe_ratio = calculate_sharpe_ratio(data)
-            st.write(f"Sharpe Ratio: {sharpe_ratio:.2f}")
+                # Расчет индикаторов
+                indicators = process_indicators(data_dict, pair)
 
-            # Зоны риска
-            fig_risk_zones = plot_risk_zones(data, atr_threshold=0.02)  # Порог можно регулировать
-            st.plotly_chart(fig_risk_zones, use_container_width=True)
-            # Рассчитываем и строим Bollinger Bands
-            try:
-                if 'BB_upper' not in data.columns or 'BB_middle' not in data.columns or 'BB_lower' not in data.columns:
-                    data = calculate_bollinger_bands(data, window=20)  # Период по умолчанию равен 20
-                    data_dict[pair] = data  # Обновляем данные
-                fig = plot_bollinger_bands(data, title=f"Bollinger Bands для {pair}")
-                st.plotly_chart(fig, use_container_width=True)
-            except Exception as e:
-                st.warning(f"Не удалось построить Bollinger Bands для {pair}: {str(e)}")
+                # Вывод значений индикаторов
+                st.write(f"Средний ATR (14 дней): {indicators['ATR_mean']:.2f}")
+                st.write(f"Value at Risk (95%): {indicators['VaR_95']:.2%}")
+                st.write(f"Sharpe Ratio: {indicators['Sharpe_Ratio']:.2f}")
 
-    else:
-        st.warning("Данные не загружены. Выберите активы и нажмите 'Загрузить данные'.")
+                # Визуализация зон риска
+                fig_risk_zones = plot_risk_zones(data_dict[pair], atr_threshold=0.02)
+                st.plotly_chart(fig_risk_zones, use_container_width=True)
+
+                # Визуализация полос Боллинджера
+                fig_bollinger = plot_bollinger_bands(data_dict[pair], title=f"Bollinger Bands для {pair}")
+                st.plotly_chart(fig_bollinger, use_container_width=True)
+
+            except ValueError as e:
+                st.warning(f"Ошибка при расчете индикаторов для {pair}: {e}")
+
 
 # Вкладка "Сравнительный анализ"
 with tab4:
