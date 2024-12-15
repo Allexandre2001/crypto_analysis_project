@@ -8,17 +8,17 @@ import logging
 
 from data.calculations import clean_data
 
-# 1. Настройка логирования
+# 1. Налаштування логування
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
 
-# 2. Загрузка API ключей из .env файла
-load_dotenv()  # Убедитесь, что файл .env находится в корневой папке проекта
+# 2. Завантаження API ключів із .env файлу
+load_dotenv()  # Переконайтеся, що файл .env знаходиться в кореневій папці проекту
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
 
 
-# Проверяем, загружены ли ключи
+# Перевіряємо, чи завантажені ключі
 if not API_KEY or not API_SECRET:
     logger.error("API ключи не найдены. Проверьте файл .env!")
 else:
@@ -26,13 +26,21 @@ else:
 
 client = Client(API_KEY, API_SECRET)
 
-# 3. Функция получения исторических данных
+# 3. Функція отримання історичних даних
 def get_historical_data(symbol, interval="1d", start_str="30 days ago UTC"):
     """
-    Получение исторических данных с Binance.
-    """
+       Завантаження історичних даних для криптовалютної пари.
+
+       Аргументи:
+       - pair: Назва криптовалютної пари (наприклад, BTCUSDT).
+       - interval: Часовий інтервал (наприклад, 1d, 1h).
+       - start_str: Час початку у форматі рядка (наприклад, "30 days ago UTC").
+
+       Повертає:
+       - DataFrame з історичними даними.
+       """
     try:
-        logger.info(f"Запрос исторических данных для {symbol} с интервалом {interval} за {start_str}")
+        logger.info(f"Запит історичних даних для {symbol} з інтервалом {interval} за {start_str}")
         candles = client.get_historical_klines(symbol, interval, start_str)
         df = pd.DataFrame(candles, columns=[
             "open_time", "open", "high", "low", "close", "volume",
@@ -43,27 +51,27 @@ def get_historical_data(symbol, interval="1d", start_str="30 days ago UTC"):
         df[["open", "high", "low", "close", "volume"]] = df[["open", "high", "low", "close", "volume"]].astype(float)
         return df
     except Exception as e:
-        logger.error(f"Ошибка при получении исторических данных для {symbol}: {e}")
-        return pd.DataFrame()  # Возвращаем пустой DataFrame при ошибке
+        logger.error(f"Помилка завантаження даних для: {symbol}: {e}")
+        return pd.DataFrame()  # Повертаємо порожній DataFrame при помилці
 
-# 4. Функция подключения к WebSocket Binance
+# 4. Функція підключення до WebSocket Binance
 def connect_websocket(symbol, interval="1m"):
     """
-    Подключение к WebSocket Binance для получения данных в реальном времени.
+ Підключення до WebSocket Binance для отримання даних у реальному часі.
     """
     try:
         url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@kline_{interval}"
         ws = websocket.create_connection(url)
-        logger.info(f"Подключение к WebSocket установлено для {symbol} с интервалом {interval}")
+        logger.info(f"Підключення до WebSocket встановлено для {symbol} з інтервалом {interval}")
         return ws
     except Exception as e:
-        logger.error(f"Ошибка подключения к WebSocket для {symbol}: {e}")
-        return None  # Возвращаем None при сбое
+        logger.error(f"Помилка підключення до WebSocket для {symbol}: {e}")
+        return None  # Повертаємо None під час збою
 
-# 5. Функция получения данных в реальном времени через WebSocket
+# 5. Функція отримання даних у реальному часі через WebSocket
 def fetch_real_time_data(ws):
     """
-    Получение данных в реальном времени через WebSocket.
+    Отримання даних у реальному часі через WebSocket.
     """
     try:
         message = ws.recv()
@@ -78,14 +86,14 @@ def fetch_real_time_data(ws):
             "volume": float(kline["v"]),
         }
     except Exception as e:
-        logger.error(f"Ошибка при получении данных в реальном времени: {e}")
-        return None  # Возвращаем None при ошибке
+        logger.error(f"Помилка при отриманні даних у реальному часі: {e}")
+        return None  # Повертаємо None під час збою
 
 def get_historical_data_cleaned(symbol, interval="1d", start_str="30 days ago UTC"):
     """
-    Получение исторических данных с очисткой.
+    Отримання історичних даних із очищенням.
     """
     raw_data = get_historical_data(symbol, interval, start_str)
     if raw_data.empty:
-        return pd.DataFrame()  # Возвращаем пустой DataFrame при ошибке
+        return pd.DataFrame() # Повертаємо порожній DataFrame при помилці
     return clean_data(raw_data)

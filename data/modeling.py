@@ -3,52 +3,52 @@ import pandas as pd
 
 def forecast_prices(data, periods=30):
     """
-    Прогнозирование цен с использованием библиотеки Prophet.
+    Прогнозування цін з використанням бібліотеки Prophet.
 
-    Параметры:
-    data (DataFrame): Исторические данные актива с колонками "open_time" (время) и "close" (цена).
-    periods (int): Количество периодов для прогнозирования (в днях).
+    Параметри:
+    data (DataFrame): Історичні дані активу з колонками "open_time" (час) і "close" (ціна).
+    periods (int): Кількість періодів для прогнозування (у днях).
 
-    Возвращает:
-    DataFrame: Прогнозные данные с колонками ["ds", "yhat", "yhat_lower", "yhat_upper"].
+    Повертає:
+    DataFrame: Прогнозні дані з колонками ["ds", "yhat", "yhat_lower", "yhat_upper"].
     """
     if data.empty or "open_time" not in data or "close" not in data:
-        raise ValueError("Данные отсутствуют или не содержат необходимые колонки 'open_time' и 'close'.")
+        raise ValueError("Дані відсутні або не містять необхідних колонок 'open_time' і 'close'.")
 
     try:
-        # Подготовка данных
+        # Підготовка даних
         df = data[["open_time", "close"]].rename(columns={"open_time": "ds", "close": "y"})
 
-        # Инициализация и обучение модели Prophet
+        # Ініціалізація та навчання моделі Prophet
         model = Prophet()
         model.fit(df)
 
-        # Создание будущего DataFrame для прогнозирования
+        # Створення майбутнього DataFrame для прогнозування
         future = model.make_future_dataframe(periods=periods)
         forecast = model.predict(future)
 
         return forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]]
     except Exception as e:
-        raise RuntimeError(f"Ошибка при прогнозировании: {e}")
+        raise RuntimeError(f"Помилка під час прогнозування: {e}")
 
 def evaluate_forecast(actual_data, forecast):
     """
-    Оценка качества прогноза на основе исторических данных.
+    Оцінка якості прогнозу на основі історичних даних.
 
-    Параметры:
-    actual_data (DataFrame): Фактические данные с колонками "open_time" и "close".
-    forecast (DataFrame): Прогнозные данные с колонками "ds" и "yhat".
+    Параметри:
+    actual_data (DataFrame): Фактичні дані з колонками "open_time" і "close".
+    forecast (DataFrame): Прогнозні дані з колонками "ds" і "yhat".
 
-    Возвращает:
-    dict: Метрики оценки прогноза (MAE, MSE, RMSE).
+    Повертає:
+    dict: Метрики оцінки прогнозу (MAE, MSE, RMSE).
     """
     if actual_data.empty or "open_time" not in actual_data or "close" not in actual_data:
-        raise ValueError("Фактические данные отсутствуют или не содержат колонку 'open_time' и 'close'.")
+        raise ValueError("Фактичні дані відсутні або не містять колонок 'open_time' і 'close'.")
     if forecast.empty or "ds" not in forecast or "yhat" not in forecast:
-        raise ValueError("Прогнозные данные отсутствуют или не содержат необходимые колонки.")
+        raise ValueError("Прогнозні дані відсутні або не містять необхідних колонок.")
 
     try:
-        # Сопоставление прогнозов с фактическими данными
+        # Співставлення прогнозів із фактичними даними
         merged_data = pd.merge(
             actual_data.rename(columns={"open_time": "ds", "close": "actual"}),
             forecast[["ds", "yhat"]],
@@ -56,7 +56,7 @@ def evaluate_forecast(actual_data, forecast):
             how="inner"
         )
 
-        # Расчёт метрик
+        # Розрахунок метрик
         merged_data["error"] = merged_data["actual"] - merged_data["yhat"]
         mae = merged_data["error"].abs().mean()  # Mean Absolute Error
         mse = (merged_data["error"] ** 2).mean()  # Mean Squared Error
@@ -64,4 +64,4 @@ def evaluate_forecast(actual_data, forecast):
 
         return {"MAE": mae, "MSE": mse, "RMSE": rmse}
     except Exception as e:
-        raise RuntimeError(f"Ошибка при оценке прогноза: {e}")
+        raise RuntimeError(f"Помилка під час оцінки прогнозу: {e}")

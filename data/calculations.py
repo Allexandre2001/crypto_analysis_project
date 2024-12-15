@@ -4,112 +4,112 @@ import plotly.graph_objects as go
 
 def clean_data(df):
     """
-    Удаляет ненужные колонки и оставляет только ключевые: open_time, open, high, low, close, volume.
+     Видаляє непотрібні колонки і залишає лише ключові: open_time, open, high, low, close, volume.
 
-    Параметры:
-    df (pd.DataFrame): Исходный DataFrame с данными актива.
+     Параметри:
+     df (pd.DataFrame): Початковий DataFrame з даними активу.
 
-    Возвращает:
-    pd.DataFrame: Очищенный DataFrame.
-    """
+     Повертає:
+     pd.DataFrame: Очищений DataFrame.
+     """
     columns_to_keep = ["open_time", "open", "high", "low", "close", "volume"]
     return df[columns_to_keep]
 
 def calculate_returns(df):
     """
-    Расчёт дневной и кумулятивной доходности.
+    Обчислення щоденного повернення активу.
 
-    Параметры:
-    df (DataFrame): Данные актива с колонкой "close".
+    Аргументи:
+    - data: DataFrame з ціновими даними.
 
-    Возвращает:
-    DataFrame: Обновлённый DataFrame с колонками "daily_return" и "cumulative_return".
-    """
+    Повертає:
+    - DataFrame з доданим стовпцем 'daily_return'.
+     """
     if df.empty or "close" not in df:
-        raise ValueError("Данные отсутствуют или не содержат колонку 'close'.")
+        raise ValueError("Дані відсутні або не містять колонки 'close'.")
     df["daily_return"] = df["close"].pct_change()
     df["cumulative_return"] = (1 + df["daily_return"]).cumprod() - 1
     return df
 
 def calculate_volatility(df):
     """
-    Рассчитывает волатильность на основе стандартного отклонения дневной доходности.
+ Розраховує волатильність на основі стандартного відхилення денної доходності.
 
-    Параметры:
-    df (DataFrame): Данные актива с колонкой "daily_return".
+ Параметри:
+ df (DataFrame): Дані активу з колонкою "daily_return".
 
-    Возвращает:
-    float: Значение волатильности.
-    """
+ Повертає:
+ float: Значення волатильності.
+ """
     if df.empty or "daily_return" not in df:
-        raise ValueError("Данные отсутствуют или не содержат колонку 'daily_return'.")
+        raise ValueError("Дані відсутні або не містять колонки 'daily_return'.")
     return df["daily_return"].std()
 
 def calculate_correlation(data_dict):
     """
-    Рассчитывает корреляцию между активами.
+     Розраховує кореляцію між активами.
 
-    Параметры:
-    data_dict (dict): Словарь с парами активов и их данными.
+     Параметри:
+     data_dict (dict): Словник із парами активів та їх даними.
 
-    Возвращает:
-    DataFrame: Матрица корреляции.
-    """
+     Повертає:
+     DataFrame: Матриця кореляції.
+     """
     close_prices = {pair: data["close"] for pair, data in data_dict.items()}
     close_df = pd.DataFrame(close_prices)
     return close_df.corr()
 
 def calculate_moving_averages(df, window=14):
     """
-    Рассчитывает скользящие средние (SMA, EMA).
+    Розраховує ковзні середні (SMA, EMA).
 
-    Параметры:
-    df (DataFrame): Данные актива с колонкой 'close'.
-    window (int): Период для расчёта SMA и EMA.
+    Параметри:
+    df (DataFrame): Дані активу з колонкою 'close'.
+    window (int): Період для розрахунку SMA та EMA.
 
-    Возвращает:
-    DataFrame: Обновлённый DataFrame с колонками 'SMA' и 'EMA'.
+    Повертає:
+    DataFrame: Оновлений DataFrame з колонками 'SMA' та 'EMA'.
     """
     if 'close' not in df.columns:
-        raise KeyError("Колонка 'close' отсутствует в данных.")
+        raise KeyError("Колонка 'close' відсутня у даних.")
 
-    # Расчёт SMA
+    # Розрахунок SMA
     df['SMA'] = df['close'].rolling(window=window).mean()
-    # Расчёт EMA
+    # Розрахунок EMA
     df['EMA'] = df['close'].ewm(span=window, adjust=False).mean()
 
     return df
 
 def calculate_sharpe_ratio(df, risk_free_rate=0.01):
     """
-    Рассчитывает коэффициент Sharpe для оценки соотношения доходности и риска.
+    Розраховує коефіцієнт Sharpe для оцінки співвідношення дохідності і ризику.
 
-    Параметры:
-    df (DataFrame): Данные актива с колонкой "daily_return".
-    risk_free_rate (float): Безрисковая ставка.
+    Параметри:
+    df (DataFrame): Дані активу з колонкою "daily_return".
+    risk_free_rate (float): Безризикова ставка.
 
-    Возвращает:
-    float: Значение коэффициента Sharpe.
+    Повертає:
+    float: Значення коефіцієнта Sharpe.
     """
     if df.empty or "daily_return" not in df:
-        raise ValueError("Данные отсутствуют или не содержат колонку 'daily_return'.")
+        raise ValueError("Дані відсутні або не містять колонку 'daily_return'.")
     mean_return = df["daily_return"].mean()
     risk = df["daily_return"].std()
     return (mean_return - risk_free_rate) / risk if risk != 0 else np.nan
 
 def calculate_rsi(df, window=14):
     """
-    Рассчитывает RSI (Relative Strength Index).
+    Розраховує RSI (Relative Strength Index).
 
-    Параметры:
-    df (DataFrame): Данные актива с колонкой "close".
-    window (int): Период для расчёта RSI.
+    Параметри:
+    df (DataFrame): Дані активу з колонкою "close".
+    window (int): Період для розрахунку RSI.
 
-    Возвращает:
-    DataFrame: Обновлённый DataFrame с колонкой "RSI".
+    Повертає:
+    DataFrame: Оновлений DataFrame з колонкою "RSI".
     """
     if df.empty or "close" not in df:
-        raise ValueError("Данные отсутствуют или не содержат колонку 'close'.")
+        raise ValueError("Дані відсутні або не містять колонку 'close'.")
     delta = df["close"].diff(1)
     gain = np.where(delta > 0, delta, 0)
     loss = np.where(delta < 0, -delta, 0)
@@ -122,19 +122,19 @@ def calculate_rsi(df, window=14):
 
 def calculate_macd(df, short_window=12, long_window=26, signal_window=9):
     """
-    Рассчитывает MACD и сигнальную линию.
+    Розраховує MACD і сигнальну лінію.
 
-    Параметры:
-    df (DataFrame): Данные актива с колонкой "close".
-    short_window (int): Период для быстрого EMA.
-    long_window (int): Период для медленного EMA.
-    signal_window (int): Период для сигнальной линии.
+    Параметри:
+    df (DataFrame): Дані активу з колонкою "close".
+    short_window (int): Період для швидкого EMA.
+    long_window (int): Період для повільного EMA.
+    signal_window (int): Період для сигнальної лінії.
 
-    Возвращает:
-    DataFrame: Обновлённый DataFrame с колонками "MACD" и "Signal".
+    Повертає:
+    DataFrame: Оновлений DataFrame з колонками "MACD" та "Signal".
     """
     if df.empty or "close" not in df:
-        raise ValueError("Данные отсутствуют или не содержат колонку 'close'.")
+        raise ValueError("Дані відсутні або не містять колонку 'close'.")
     df["MACD"] = df["close"].ewm(span=short_window, adjust=False).mean() - \
                  df["close"].ewm(span=long_window, adjust=False).mean()
     df["Signal"] = df["MACD"].ewm(span=signal_window, adjust=False).mean()
@@ -142,15 +142,15 @@ def calculate_macd(df, short_window=12, long_window=26, signal_window=9):
 
 def generate_advanced_recommendations(data_dict, rsi_thresholds=(30, 70), volume_threshold=1.5):
     """
-    Генерирует расширенные рекомендации на основе MACD, RSI, объёмов и трендов.
+    Генерує розширені рекомендації на основі MACD, RSI, обсягів та трендів.
 
-    Параметры:
-    data_dict (dict): Словарь с парами активов и их данными.
-    rsi_thresholds (tuple): Пороговые значения RSI для перепроданности и перекупленности.
-    volume_threshold (float): Коэффициент для анализа объёма.
+    Параметри:
+    data_dict (dict): Словник із парами активів та їх даними.
+    rsi_thresholds (tuple): Порогові значення RSI для перепроданості та перекупленості.
+    volume_threshold (float): Коефіцієнт для аналізу обсягу.
 
-    Возвращает:
-    list: Список рекомендаций.
+    Повертає:
+    list: Список рекомендацій.
     """
     recommendations = []
     for pair, data in data_dict.items():
@@ -165,55 +165,53 @@ def generate_advanced_recommendations(data_dict, rsi_thresholds=(30, 70), volume
             average_volume = data["volume"].mean()
             last_close = data["close"].iloc[-1]
 
-            trend = "восходящий" if data["close"].iloc[-1] > data["close"].iloc[-2] else "нисходящий"
-            volume_status = "увеличен" if last_volume > average_volume * volume_threshold else "нормальный"
+            trend = "висхідний" if data["close"].iloc[-1] > data["close"].iloc[-2] else "низхідний"
+            volume_status = "збільшений" if last_volume > average_volume * volume_threshold else "нормальний"
 
             recommendation = (
-                f"{pair}: Тренд {trend}, объём {volume_status}, RSI: {last_rsi:.2f}, MACD: {last_macd:.2f}. "
-                f"Цена закрытия: ${last_close:.2f}. "
+                f"{pair}: Тренд {trend}, обсяг {volume_status}, RSI: {last_rsi:.2f}, MACD: {last_macd:.2f}. "
+                f"Ціна закриття: ${last_close:.2f}. "
             )
             if last_rsi < rsi_thresholds[0]:
-                recommendation += "RSI показывает перепроданность. Рассмотрите покупку."
+                recommendation += "RSI показує перепроданість. Розгляньте покупку."
             elif last_rsi > rsi_thresholds[1]:
-                recommendation += "RSI показывает перекупленность. Рассмотрите продажу."
+                recommendation += "RSI показує перекупленість. Розгляньте продаж."
             recommendations.append(recommendation)
         except Exception as e:
-            recommendations.append(f"{pair}: Ошибка в расчётах - {str(e)}")
+            recommendations.append(f"{pair}: Помилка у розрахунках - {str(e)}")
     return recommendations
 
 def calculate_var(data, confidence_level=0.95):
     """
-    Рассчитать Value at Risk (VaR) для заданного уровня доверия.
+    Розраховує Value at Risk (VaR) для заданого рівня довіри.
 
-    Параметры:
-    - data (DataFrame): Данные, содержащие цены закрытия.
-    - confidence_level (float): Уровень доверия для расчета VaR (по умолчанию 95%).
+    Параметри:
+    - data (DataFrame): Дані, що містять ціни закриття.
+    - confidence_level (float): Рівень довіри для розрахунку VaR (за замовчуванням 95%).
 
-    Возвращает:
-    - VaR (float): Значение риска.
+    Повертає:
+    - VaR (float): Значення ризику.
     """
-    # Проверяем, есть ли колонка 'daily_return'. Если нет, рассчитываем ее.
     if 'daily_return' not in data.columns:
         if 'close' not in data.columns:
-            raise KeyError("Данные не содержат колонку 'close' для расчета 'daily_return'.")
+            raise KeyError("Дані не містять колонку 'close' для розрахунку 'daily_return'.")
         data['daily_return'] = data['close'].pct_change()
 
-    # Рассчитываем VaR
     return np.percentile(data['daily_return'].dropna(), (1 - confidence_level) * 100)
 
 def calculate_atr(data, window=14):
     """
-    Рассчитать Average True Range (ATR) для заданного периода.
+    Розраховує Average True Range (ATR) для заданого періоду.
 
-    Параметры:
-    - data (DataFrame): Данные с колонками 'high', 'low' и 'close'.
-    - window (int): Период для расчета ATR (по умолчанию 14).
+    Параметри:
+    - data (DataFrame): Дані з колонками 'high', 'low' та 'close'.
+    - window (int): Період для розрахунку ATR (за замовчуванням 14).
 
-    Возвращает:
-    - DataFrame: Обновленный DataFrame с колонкой 'ATR'.
+    Повертає:
+    - DataFrame: Оновлений DataFrame з колонкою 'ATR'.
     """
     if not {'high', 'low', 'close'}.issubset(data.columns):
-        raise KeyError("Для расчета ATR необходимы колонки 'high', 'low' и 'close'.")
+        raise KeyError("Для розрахунку ATR потрібні колонки 'high', 'low' та 'close'.")
 
     data['TR'] = data[['high', 'low', 'close']].apply(
         lambda row: max(
@@ -228,43 +226,37 @@ def calculate_atr(data, window=14):
 
 def process_indicators(data_dict, pair, atr_window=14, bollinger_window=20):
     """
-    Расчет индикаторов для заданной криптовалютной пары и обновление данных.
+    Розрахунок індикаторів для заданої криптовалютної пари та оновлення даних.
 
-    Параметры:
-    data_dict (dict): Словарь с данными для каждой пары.
-    pair (str): Название пары (например, BTCUSDT).
-    atr_window (int): Период для расчета ATR.
-    bollinger_window (int): Период для полос Боллинджера.
+    Параметри:
+    data_dict (dict): Словник із даними для кожної пари.
+    pair (str): Назва пари (наприклад, BTCUSDT).
+    atr_window (int): Період для розрахунку ATR.
+    bollinger_window (int): Період для смуг Боллінджера.
 
-    Возвращает:
-    dict: Обновленные данные с рассчитанными индикаторами.
+    Повертає:
+    dict: Оновлені дані з розрахованими індикаторами.
     """
     data = data_dict.get(pair)
 
     if data is None or data.empty:
-        raise ValueError(f"Данные для {pair} отсутствуют или пусты.")
+        raise ValueError(f"Дані для {pair} відсутні або порожні.")
 
-    # Очистка данных (если требуется)
     columns_needed = ["open_time", "open", "high", "low", "close", "volume"]
     data = data[columns_needed]
 
-    # Расчет ATR
     if "ATR" not in data.columns:
         data = calculate_atr(data, window=atr_window)
 
-    # Расчет VaR
     if "daily_return" not in data.columns:
         data["daily_return"] = data["close"].pct_change()
     var_95 = calculate_var(data)
 
-    # Расчет Sharpe Ratio
     sharpe_ratio = calculate_sharpe_ratio(data)
 
-    # Полосы Боллинджера
     if not {"BB_upper", "BB_middle", "BB_lower"}.issubset(data.columns):
         data = calculate_bollinger_bands(data, window=bollinger_window)
 
-    # Добавление индикаторов обратно в словарь
     data_dict[pair] = data
 
     return {
@@ -279,77 +271,77 @@ def process_indicators(data_dict, pair, atr_window=14, bollinger_window=20):
     }
 
 
+
 def calculate_bollinger_bands(data, window=20):
     """
-    Рассчитывает полосы Боллинджера (Bollinger Bands) для набора данных.
+    Розраховує смуги Боллінджера (Bollinger Bands) для набору даних.
 
-    Параметры:
-    - data (DataFrame): Исторические данные, должны содержать колонку 'close'.
-    - window (int): Период для расчета скользящего среднего и стандартного отклонения.
+    Параметри:
+    - data (DataFrame): Історичні дані, повинні містити колонку 'close'.
+    - window (int): Період для розрахунку ковзного середнього та стандартного відхилення.
 
-    Возвращает:
-    - DataFrame с добавленными колонками 'BB_upper', 'BB_middle', 'BB_lower'.
+    Повертає:
+    - DataFrame з доданими колонками 'BB_upper', 'BB_middle', 'BB_lower'.
     """
     if 'close' not in data.columns:
-        raise KeyError("Данные должны содержать колонку 'close' для расчета полос Боллинджера.")
+        raise KeyError("Дані повинні містити колонку 'close' для розрахунку смуг Боллінджера.")
 
     data['BB_middle'] = data['close'].rolling(window=window).mean()
     data['BB_std'] = data['close'].rolling(window=window).std()
     data['BB_upper'] = data['BB_middle'] + (2 * data['BB_std'])
     data['BB_lower'] = data['BB_middle'] - (2 * data['BB_std'])
 
-    # Удаляем временную колонку
     data.drop(columns=['BB_std'], inplace=True)
 
     return data
 
 def calculate_correlation_matrix(data_dict):
     """
-    Рассчитывает корреляционную матрицу для данных нескольких активов.
+    Розраховує кореляційну матрицю для даних кількох активів.
 
-    Параметры:
-    - data_dict (dict): Словарь, где ключи — активы, значения — DataFrame с колонкой 'close'.
+    Параметри:
+    - data_dict (dict): Словник, де ключі — активи, значення — DataFrame із колонкою 'close'.
 
-    Возвращает:
-    - DataFrame: Корреляционная матрица.
+    Повертає:
+    - DataFrame: Кореляційна матриця.
     """
     correlation_data = {}
     for asset, data in data_dict.items():
         if 'close' in data.columns:
-            correlation_data[asset] = data['close'].pct_change().dropna()  # Вычисляем дневные изменения
+            correlation_data[asset] = data['close'].pct_change().dropna()
 
     if correlation_data:
         correlation_df = pd.DataFrame(correlation_data)
-        correlation_matrix = correlation_df.corr()  # Рассчитываем корреляцию
+        correlation_matrix = correlation_df.corr()
         return correlation_matrix
     else:
-        raise ValueError("Нет доступных данных для расчета корреляционной матрицы.")
+        raise ValueError("Немає доступних даних для розрахунку кореляційної матриці.")
 
 def monte_carlo_simulation(data, num_simulations=1000, num_days=30):
     """
-    Выполняет моделирование методом Монте-Карло для прогнозирования цен.
+    Виконує моделювання методом Монте-Карло для прогнозування цін.
 
-    Параметры:
-    - data (DataFrame): Исторические данные, включая цены закрытия.
-    - num_simulations (int): Количество симуляций.
-    - num_days (int): Количество дней для прогнозирования.
+    Параметри:
+    - data (DataFrame): Історичні дані, включаючи ціни закриття.
+    - num_simulations (int): Кількість симуляцій.
+    - num_days (int): Кількість днів для прогнозування.
 
-    Возвращает:
-    - simulated_prices (DataFrame): Симулированные цены для каждого сценария.
+    Повертає:
+    - simulated_prices (DataFrame): Симульовані ціни для кожного сценарію.
     """
     if "close" not in data:
-        raise ValueError("В данных отсутствует колонка 'close' для выполнения моделирования.")
+        raise ValueError("В даних відсутня колонка 'close' для виконання моделювання.")
 
-    # Ежедневные изменения цен
+    # Щоденні зміни цін
     daily_returns = data["close"].pct_change().dropna()
     mean_return = daily_returns.mean()
     std_dev = daily_returns.std()
 
-    # Матрица для хранения симулированных цен
+    # Матриця для збереження симульованих цін
     last_price = data["close"].iloc[-1]
     simulated_prices = np.zeros((num_days, num_simulations))
 
-    # Выполняем моделирование
+    # Виконуємо моделювання
     for simulation in range(num_simulations):
         prices = [last_price]
         for day in range(1, num_days):
@@ -361,143 +353,138 @@ def monte_carlo_simulation(data, num_simulations=1000, num_days=30):
 
 def bayesian_update(prior, likelihood, evidence):
     """
-    Обновляет апостериорную вероятность с использованием Байесовской теоремы.
+    Оновлює апостеріорну ймовірність за допомогою Байєсівської теореми.
 
-    Параметры:
-    - prior (float): Априорная вероятность (до получения новых данных).
-    - likelihood (float): Вероятность наблюдаемых данных при гипотезе.
-    - evidence (float): Вероятность наблюдаемых данных.
+    Параметри:
+    - prior (float): Апріорна ймовірність (до отримання нових даних).
+    - likelihood (float): Ймовірність спостережуваних даних за гіпотезою.
+    - evidence (float): Ймовірність спостережуваних даних.
 
-    Возвращает:
-    - posterior (float): Апостериорная вероятность (после учета новых данных).
+    Повертає:
+    - posterior (float): Апостеріорна ймовірність (після врахування нових даних).
     """
     posterior = (likelihood * prior) / evidence
     return posterior
 
 def calculate_bayes_laplace(data, probabilities):
     """
-    Рассчитывает критерий Байеса-Лапласа для набора данных.
+    Розраховує критерій Байєса-Лапласа для набору даних.
 
-    Параметры:
-    - data (DataFrame): Матрица выплат, где строки - альтернативы, а столбцы - сценарии.
-    - probabilities (list): Список вероятностей для каждого сценария.
+    Параметри:
+    - data (DataFrame): Матриця виплат, де рядки - альтернативи, а стовпці - сценарії.
+    - probabilities (list): Список ймовірностей для кожного сценарію.
 
-    Возвращает:
-    - (Series): Значения критерия Байеса-Лапласа для каждой альтернативы.
+    Повертає:
+    - (Series): Значення критерію Байєса-Лапласа для кожної альтернативи.
     """
     if len(probabilities) != data.shape[1]:
-        raise ValueError("Количество вероятностей должно совпадать с количеством сценариев.")
+        raise ValueError("Кількість ймовірностей повинна збігатися з кількістю сценаріїв.")
     return data.dot(probabilities)
 
 def calculate_savage(data):
     """
-    Рассчитывает критерий Сэвиджа для набора данных.
+    Розраховує критерій Севіджа для набору даних.
 
-    Параметры:
-    - data (DataFrame): Матрица выплат, где строки - альтернативы, а столбцы - сценарии.
+    Параметри:
+    - data (DataFrame): Матриця виплат, де рядки - альтернативи, а стовпці - сценарії.
 
-    Возвращает:
-    - (Series): Значения критерия Сэвиджа для каждой альтернативы.
+    Повертає:
+    - (Series): Значення критерію Севіджа для кожної альтернативи.
     """
     regret_matrix = data.max(axis=0) - data
     return regret_matrix.max(axis=1)
 
 def calculate_hurwicz(data, alpha=0.5):
     """
-    Рассчитывает критерий Гурвица для набора данных.
+    Розраховує критерій Гурвіца для набору даних.
 
-    Параметры:
-    - data (DataFrame): Матрица выплат, где строки - альтернативы, а столбцы - сценарии.
-    - alpha (float): Коэффициент оптимизма (значение от 0 до 1).
+    Параметри:
+    - data (DataFrame): Матриця виплат, де рядки - альтернативи, а стовпці - сценарії.
+    - alpha (float): Коефіцієнт оптимізму (значення від 0 до 1).
 
-    Возвращает:
-    - (Series): Значения критерия Гурвица для каждой альтернативы.
+    Повертає:
+    - (Series): Значення критерію Гурвіца для кожної альтернативи.
     """
     if not (0 <= alpha <= 1):
-        raise ValueError("Коэффициент оптимизма должен быть в диапазоне от 0 до 1.")
+        raise ValueError("Коефіцієнт оптимізму має бути в діапазоні від 0 до 1.")
     return alpha * data.max(axis=1) + (1 - alpha) * data.min(axis=1)
 
 def calculate_sharpe_ratio(data, risk_free_rate=0.01):
     """
-    Расчет коэффициента Шарпа для оценки риска и доходности.
+    Розрахунок коефіцієнта Шарпа для оцінки ризику і дохідності.
 
-    :param data: DataFrame с колонкой 'daily_return'.
-    :param risk_free_rate: Безрисковая ставка доходности (по умолчанию 1%).
+    :param data: DataFrame з колонкою 'daily_return'.
+    :param risk_free_rate: Безризикова ставка дохідності (за замовчуванням 1%).
     :return: Sharpe Ratio.
     """
     if 'daily_return' not in data:
-        data['daily_return'] = data['close'].pct_change()  # Расчет дневной доходности
+        data['daily_return'] = data['close'].pct_change()  # Розрахунок щоденної дохідності
     excess_return = data['daily_return'].mean() - risk_free_rate
     return excess_return / data['daily_return'].std()
 
 def generate_trend_recommendations(data):
     """
-    Генерация рекомендаций на основе трендов SMA и EMA.
+    Генерація рекомендацій на основі трендів SMA та EMA.
 
-    :param data: DataFrame с колонками 'SMA' и 'EMA'.
-    :return: Список рекомендаций.
+    :param data: DataFrame з колонками 'SMA' і 'EMA'.
+    :return: Список рекомендацій.
     """
     recommendations = []
 
-    # Проверяем наличие колонок 'EMA' и 'SMA'
+    # Перевірка наявності колонок 'EMA' і 'SMA'
     if 'EMA' not in data.columns or 'SMA' not in data.columns:
-        # Рассчитываем EMA и SMA, если их нет
-        data = calculate_moving_averages(data, window=14)  # Период можно настроить
+        # Розраховуємо EMA і SMA, якщо їх немає
+        data = calculate_moving_averages(data, window=14)  # Період можна налаштувати
 
-    # Проверяем, что колонки появились
-    if 'EMA' not in data.columns or 'SMA' not in data.columns:
-        raise KeyError("Колонки 'EMA' или 'SMA' отсутствуют. Убедитесь, что они рассчитаны перед вызовом.")
-
-    # Генерация рекомендаций
+    # Генерація рекомендацій
     if data['EMA'].iloc[-1] > data['SMA'].iloc[-1]:
-        recommendations.append("Текущий тренд восходящий. Рекомендуется покупка.")
+        recommendations.append("Поточний тренд висхідний. Рекомендується купівля.")
     else:
-        recommendations.append("Текущий тренд нисходящий. Рассмотрите продажу.")
+        recommendations.append("Поточний тренд низхідний. Розгляньте продаж.")
 
     return recommendations
 
-
-def highlight_risk_zones(data, title="Зоны риска"):
+def highlight_risk_zones(data, title="Зони ризику"):
     """
-    Создает график с выделенными зонами высокого и низкого риска.
+    Створює графік із виділеними зонами високого та низького ризику.
     """
     fig = go.Figure()
 
-    # Основной график цен
+    # Основний графік цін
     fig.add_trace(go.Scatter(
         x=data["open_time"],
         y=data["close"],
         mode="lines",
-        name="Цена",
+        name="Ціна",
         line=dict(color="blue")
     ))
 
-    # Маска для зоны высокого риска
+    # Маска для зони високого ризику
     high_risk_mask = data["volatility"] > data["volatility"].mean()
 
-    # Зона высокого риска
+    # Зона високого ризику
     fig.add_trace(go.Scatter(
         x=data["open_time"][high_risk_mask],
         y=data["close"][high_risk_mask],
         mode="markers",
         marker=dict(color="red", size=5),
-        name="Высокий риск"
+        name="Високий ризик"
     ))
 
-    # Зона низкого риска
+    # Зона низького ризику
     fig.add_trace(go.Scatter(
         x=data["open_time"][~high_risk_mask],
         y=data["close"][~high_risk_mask],
         mode="markers",
         marker=dict(color="green", size=5),
-        name="Низкий риск"
+        name="Низький ризик"
     ))
 
-    # Настройка графика
+    # Налаштування графіка
     fig.update_layout(
         title=title,
         xaxis_title="Дата",
-        yaxis_title="Цена",
+        yaxis_title="Ціна",
         template="plotly_white"
     )
 
@@ -505,8 +492,8 @@ def highlight_risk_zones(data, title="Зоны риска"):
 
 def detect_trends(data):
     """
-    Определяет восходящие и нисходящие тренды на основе EMA.
-    Возвращает DataFrame с колонкой 'trend' (up/down).
+    Визначає висхідні та низхідні тренди на основі EMA.
+    Повертає DataFrame з колонкою 'trend' (up/down).
     """
     data["trend"] = "stable"
     data.loc[data["close"] > data["EMA"], "trend"] = "up"
@@ -515,33 +502,33 @@ def detect_trends(data):
 
 def calculate_bayesian_probabilities(data, threshold=0.01):
     """
-    Рассчитывает апостериорные вероятности для движения цены вверх/вниз.
+    Розраховує апостеріорні ймовірності для руху ціни вгору/вниз.
 
-    Параметры:
-    - data (DataFrame): Исторические данные с колонкой "close".
-    - threshold (float): Порог для определения значимого изменения цены.
+    Параметри:
+    - data (DataFrame): Історичні дані з колонкою "close".
+    - threshold (float): Поріг для визначення значної зміни ціни.
 
-    Возвращает:
-    - probabilities (dict): Апостериорные вероятности для гипотез.
+    Повертає:
+    - probabilities (dict): Апостеріорні ймовірності для гіпотез.
     """
     if "close" not in data:
-        raise ValueError("В данных отсутствует колонка 'close'.")
+        raise ValueError("В даних відсутня колонка 'close'.")
 
-    # Рассчитываем изменения цен
+    # Розраховуємо зміни цін
     data['price_change'] = data['close'].pct_change()
 
-    # Определяем априорные вероятности
+    # Апріорні ймовірності
     prior_up = 0.5
     prior_down = 0.5
 
-    # Вероятности при изменении цены выше/ниже порога
+    # Ймовірності при зміні ціни вище/нижче порогу
     likelihood_up = np.mean(data['price_change'] > threshold)
     likelihood_down = np.mean(data['price_change'] < -threshold)
 
-    # Общая вероятность изменения
+    # Загальна ймовірність зміни
     evidence = likelihood_up + likelihood_down
 
-    # Обновляем вероятности
+    # Оновлення ймовірностей
     posterior_up = bayesian_update(prior_up, likelihood_up, evidence)
     posterior_down = bayesian_update(prior_down, likelihood_down, evidence)
 

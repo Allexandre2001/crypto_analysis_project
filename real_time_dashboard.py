@@ -8,23 +8,23 @@ import plotly.graph_objects as go
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Глобальное хранилище данных
+# Глобальне сховище даних
 global_data = pd.DataFrame()
 
 def connect_websocket(pair, interval="1m"):
     """
-    Подключение к WebSocket Binance.
+    Підключення до WebSocket Binance.
     """
     try:
         url = f"wss://stream.binance.com:9443/ws/{pair.lower()}@kline_{interval}"
         ws = websocket.create_connection(url)
         return ws
     except Exception as e:
-        raise ConnectionError(f"Ошибка подключения к WebSocket: {e}")
+        raise ConnectionError(f"Помилка підключення до WebSocket: {e}")
 
 def fetch_real_time_data(ws):
     """
-    Получение данных через WebSocket.
+    Отримання даних через WebSocket.
     """
     try:
         result = ws.recv()
@@ -40,28 +40,28 @@ def fetch_real_time_data(ws):
         }
         return row
     except Exception as e:
-        raise RuntimeError(f"Ошибка получения данных: {e}")
+        raise RuntimeError(f"Помилка отримання даних: {e}")
 
 def create_graph(data):
     """
-    Построение графика.
+    Побудова графіка.
     """
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data["time"], y=data["close"], mode="lines", name="Цена закрытия"))
+    fig.add_trace(go.Scatter(x=data["time"], y=data["close"], mode="lines", name="Ціна закриття"))
     fig.update_layout(
         template="plotly_white",
-        title="График актива в реальном времени",
-        xaxis_title="Время",
-        yaxis_title="Цена (USD)"
+        title="Графік активу в реальному часі",
+        xaxis_title="Час",
+        yaxis_title="Ціна (USD)"
     )
     return fig
 
-# Интерфейс Dash
+# Інтерфейс Dash
 app.layout = html.Div([
     dbc.Row([
         dbc.Col([
-            html.H3("График в реальном времени"),
-            html.Label("Выберите криптовалютную пару:"),
+            html.H3("Графік у реальному часі"),
+            html.Label("Оберіть криптовалютну пару:"),
             dcc.Dropdown(
                 id="symbol-selector",
                 options=[
@@ -70,23 +70,23 @@ app.layout = html.Div([
                     {"label": "BNB/USDT", "value": "BNBUSDT"}
                 ],
                 value="BTCUSDT",
-                placeholder="Выберите пару"
+                placeholder="Оберіть пару"
             ),
-            html.Label("Выберите интервал:"),
+            html.Label("Оберіть інтервал:"),
             dcc.Dropdown(
                 id="interval-selector",
                 options=[
-                    {"label": "1 минута", "value": "1m"},
-                    {"label": "5 минут", "value": "5m"},
-                    {"label": "1 час", "value": "1h"}
+                    {"label": "1 хвилина", "value": "1m"},
+                    {"label": "5 хвилин", "value": "5m"},
+                    {"label": "1 година", "value": "1h"}
                 ],
                 value="1m",
-                placeholder="Выберите интервал"
+                placeholder="Оберіть інтервал"
             ),
             dcc.Graph(id="real-time-graph"),
             dcc.Interval(
                 id="interval-update",
-                interval=10*1000,  # Обновление каждые 10 секунд
+                interval=10*1000,  # Оновлення кожні 10 секунд
                 n_intervals=0
             )
         ], width=12)
@@ -101,7 +101,7 @@ app.layout = html.Div([
 )
 def update_graph(pair, interval, n_intervals):
     """
-    Обновление графика в реальном времени.
+    Оновлення графіка у реальному часі.
     """
     global global_data
 
@@ -110,15 +110,15 @@ def update_graph(pair, interval, n_intervals):
         new_data = fetch_real_time_data(ws)
         ws.close()
 
-        # Обновляем данные
-        global_data = pd.concat([global_data, pd.DataFrame([new_data])]).tail(500)  # Храним только последние 500 точек
+        # Оновлюємо дані
+        global_data = pd.concat([global_data, pd.DataFrame([new_data])]).tail(500)  # Зберігаємо лише останні 500 точок
         return create_graph(global_data)
 
     except Exception as e:
         return go.Figure().update_layout(
-            title=f"Ошибка загрузки данных: {e}",
-            xaxis_title="Время",
-            yaxis_title="Цена (USD)"
+            title=f"Помилка завантаження даних: {e}",
+            xaxis_title="Час",
+            yaxis_title="Ціна (USD)"
         )
 
 if __name__ == "__main__":

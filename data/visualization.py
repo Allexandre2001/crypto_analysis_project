@@ -3,9 +3,8 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
 
-
 def preprocess_data(data, interval="1m"):
-    """Предобработка данных для повышения производительности."""
+    """Попередня обробка даних для підвищення продуктивності."""
     if interval == "1m":
         data = data.resample("5T", on="open_time").agg({
             "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
@@ -14,125 +13,125 @@ def preprocess_data(data, interval="1m"):
 
 def plot_price_and_volume_optimized(data, interval="1m", sma_window=14, ema_window=14, chart_type="line"):
     """
-    Оптимизированное построение графиков для цен и объемов с синхронизацией.
+    Оптимізоване побудова графіків для цін і обсягів із синхронізацією.
     """
-    # Агрегирование данных, если требуется
+    # Агрегація даних, якщо необхідно
     if interval == "1m":
         data = preprocess_data(data, interval)
 
-    # Создаем график с двумя рядами
+    # Створюємо графік з двома рядами
     fig = make_subplots(
         rows=2, cols=1, shared_xaxes=True,
-        row_heights=[0.7, 0.3],  # Верхний график для цен (70%), нижний для объемов (30%)
+        row_heights=[0.7, 0.3],  # Верхній графік для цін (70%), нижній для обсягів (30%)
         vertical_spacing=0.03
     )
 
-    # Верхний график - цены
+    # Верхній графік - ціни
     if chart_type == "line":
-        fig.add_trace(go.Scatter(x=data["open_time"], y=data["close"], mode="lines", name="Цена закрытия"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=data["open_time"], y=data["close"], mode="lines", name="Ціна закриття"), row=1, col=1)
     elif chart_type == "candlestick":
         fig.add_trace(go.Candlestick(
             x=data["open_time"], open=data["open"], high=data["high"], low=data["low"], close=data["close"],
-            name="Свечной график"), row=1, col=1
+            name="Свічковий графік"), row=1, col=1
         )
     elif chart_type == "bar":
-        fig.add_trace(go.Bar(x=data["open_time"], y=data["close"], name="Баровый график"), row=1, col=1)
+        fig.add_trace(go.Bar(x=data["open_time"], y=data["close"], name="Стовпчиковий графік"), row=1, col=1)
 
-    # Добавляем индикаторы на график цен
+    # Додаємо індикатори на графік цін
     data["SMA"] = data["close"].rolling(window=sma_window).mean()
     data["EMA"] = data["close"].ewm(span=ema_window, adjust=False).mean()
     fig.add_trace(go.Scatter(x=data["open_time"], y=data["SMA"], mode="lines", name=f"SMA ({sma_window})"), row=1, col=1)
     fig.add_trace(go.Scatter(x=data["open_time"], y=data["EMA"], mode="lines", name=f"EMA ({ema_window})"), row=1, col=1)
 
-    # Нижний график - объемы
-    fig.add_trace(go.Bar(x=data["open_time"], y=data["volume"], name="Объем"), row=2, col=1)
+    # Нижній графік - обсяги
+    fig.add_trace(go.Bar(x=data["open_time"], y=data["volume"], name="Обсяг"), row=2, col=1)
 
-    # Настройка осей
+    # Налаштування осей
     fig.update_xaxes(title_text="Дата", row=2, col=1)
-    fig.update_yaxes(title_text="Цена (USD)", row=1, col=1)
-    fig.update_yaxes(title_text="Объем", row=2, col=1)
+    fig.update_yaxes(title_text="Ціна (USD)", row=1, col=1)
+    fig.update_yaxes(title_text="Обсяг", row=2, col=1)
 
-    # Общие настройки
+    # Загальні налаштування
     fig.update_layout(
-        title="Графики цен и объемов",
+        title="Графіки цін і обсягів",
         template="plotly_white",
-        dragmode="pan",  # Панорамирование
+        dragmode="pan",  # Панорамування
         xaxis=dict(
-            rangeslider=dict(visible=False)  # Синхронизация оси X
+            rangeslider=dict(visible=False)  # Синхронізація осі X
         )
     )
 
     return fig
 
-def plot_comparison(data_long, data_short, title="Сравнительный анализ"):
+def plot_comparison(data_long, data_short, title="Порівняльний аналіз"):
     """
-    Построение сравнительного графика долгосрочных и краткосрочных данных.
+    Побудова порівняльного графіка довгострокових і короткострокових даних.
 
-    Параметры:
-    - data_long (DataFrame): Долгосрочные данные.
-    - data_short (DataFrame): Краткосрочные данные.
-    - title (str): Заголовок графика.
+    Параметри:
+    - data_long (DataFrame): Довгострокові дані.
+    - data_short (DataFrame): Короткострокові дані.
+    - title (str): Заголовок графіка.
 
-    Возвращает:
-    - fig (Figure): Объект Plotly Figure.
+    Повертає:
+    - fig (Figure): Об'єкт Plotly Figure.
     """
     fig = go.Figure()
 
-    # Долгосрочный график
+    # Довгостроковий графік
     fig.add_trace(go.Scatter(
         x=data_long["open_time"], y=data_long["close"],
-        mode="lines", name="Долгосрочный тренд", line=dict(color="blue")
+        mode="lines", name="Довгостроковий тренд", line=dict(color="blue")
     ))
 
-    # Краткосрочный график
+    # Короткостроковий графік
     fig.add_trace(go.Scatter(
         x=data_short["open_time"], y=data_short["close"],
-        mode="lines", name="Краткосрочный тренд", line=dict(color="orange")
+        mode="lines", name="Короткостроковий тренд", line=dict(color="orange")
     ))
 
-    # Настройка графика
+    # Налаштування графіка
     fig.update_layout(
         title=title,
         xaxis_title="Дата",
-        yaxis_title="Цена (USD)",
+        yaxis_title="Ціна (USD)",
         template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
     return fig
 
-def plot_bollinger_bands(data, title="Bollinger Bands"):
+def plot_bollinger_bands(data, title="Смуги Боллінджера"):
     """
-    Построение графика полос Боллинджера с помощью Plotly.
+    Побудова графіка смуг Боллінджера за допомогою Plotly.
 
-    Параметры:
-    - data (DataFrame): Данные с колонками 'close', 'BB_upper', 'BB_middle', 'BB_lower'.
-    - title (str): Заголовок графика.
+    Параметри:
+    - data (DataFrame): Дані з колонками 'close', 'BB_upper', 'BB_middle', 'BB_lower'.
+    - title (str): Заголовок графіка.
 
-    Возвращает:
-    - Объект Plotly Figure.
+    Повертає:
+    - Об'єкт Plotly Figure.
     """
     fig = go.Figure()
 
-    # График закрытия цен
+    # Графік закриття цін
     fig.add_trace(go.Scatter(
         x=data['open_time'], y=data['close'],
-        mode='lines', name='Цена закрытия', line=dict(color='blue')
+        mode='lines', name='Ціна закриття', line=dict(color='blue')
     ))
 
-    # Верхняя полоса
+    # Верхня смуга
     fig.add_trace(go.Scatter(
         x=data['open_time'], y=data['BB_upper'],
         mode='lines', name='BB Upper', line=dict(color='red'), opacity=0.5
     ))
 
-    # Средняя полоса
+    # Середня смуга
     fig.add_trace(go.Scatter(
         x=data['open_time'], y=data['BB_middle'],
         mode='lines', name='BB Middle', line=dict(color='green'), opacity=0.5
     ))
 
-    # Нижняя полоса
+    # Нижня смуга
     fig.add_trace(go.Scatter(
         x=data['open_time'], y=data['BB_lower'],
         mode='lines', name='BB Lower', line=dict(color='red'), opacity=0.5
@@ -141,22 +140,22 @@ def plot_bollinger_bands(data, title="Bollinger Bands"):
     fig.update_layout(
         title=title,
         xaxis_title="Дата",
-        yaxis_title="Цена (USD)",
+        yaxis_title="Ціна (USD)",
         template="plotly_white"
     )
 
     return fig
 
-def plot_correlation_matrix(correlation_matrix, title="Корреляционная матрица"):
+def plot_correlation_matrix(correlation_matrix, title="Кореляційна матриця"):
     """
-    Визуализация корреляционной матрицы.
+    Візуалізація кореляційної матриці.
 
-    Параметры:
-    - correlation_matrix (DataFrame): Корреляционная матрица.
-    - title (str): Заголовок графика.
+    Параметри:
+    - correlation_matrix (DataFrame): Кореляційна матриця.
+    - title (str): Заголовок графіка.
 
-    Возвращает:
-    - Объект Plotly Figure.
+    Повертає:
+    - Об'єкт Plotly Figure.
     """
     fig = px.imshow(
         correlation_matrix,
@@ -165,26 +164,26 @@ def plot_correlation_matrix(correlation_matrix, title="Корреляционн�
         title=title
     )
     fig.update_layout(
-        xaxis_title="Активы",
-        yaxis_title="Активы",
+        xaxis_title="Активи",
+        yaxis_title="Активи",
         template="plotly_white"
     )
     return fig
 
-def plot_monte_carlo(simulated_prices, title="Моделирование методом Монте-Карло"):
+def plot_monte_carlo(simulated_prices, title="Моделювання методом Монте-Карло"):
     """
-    Строит график результатов моделирования методом Монте-Карло.
+    Побудова графіка результатів моделювання методом Монте-Карло.
 
-    Параметры:
-    - simulated_prices (DataFrame): Симулированные цены для каждого сценария.
-    - title (str): Заголовок графика.
+    Параметри:
+    - simulated_prices (DataFrame): Симульовані ціни для кожного сценарію.
+    - title (str): Заголовок графіка.
 
-    Возвращает:
-    - fig (Figure): График Plotly.
+    Повертає:
+    - fig (Figure): Графік Plotly.
     """
     fig = go.Figure()
 
-    # Добавляем все сценарии
+    # Додаємо всі сценарії
     for col in simulated_prices.columns:
         fig.add_trace(go.Scatter(
             x=simulated_prices.index,
@@ -195,34 +194,33 @@ def plot_monte_carlo(simulated_prices, title="Моделирование мет�
             showlegend=False
         ))
 
-    # Средний сценарий
+    # Середній сценарій
     fig.add_trace(go.Scatter(
         x=simulated_prices.index,
         y=simulated_prices.mean(axis=1),
         mode="lines",
         line=dict(width=2, color="red"),
-        name="Средний сценарий"
+        name="Середній сценарій"
     ))
 
     fig.update_layout(
         title=title,
-        xaxis_title="Дни",
-        yaxis_title="Цена (USD)",
+        xaxis_title="Дні",
+        yaxis_title="Ціна (USD)",
         template="plotly_white"
     )
     return fig
 
-
-def plot_criteria_results(criteria_results, title="Риск и доходность"):
+def plot_criteria_results(criteria_results, title="Ризик і дохідність"):
     """
-    Визуализация результатов критериев Байеса-Лапласа, Сэвиджа и Гурвица.
+    Візуалізація результатів критеріїв Байєса-Лапласа, Севіджа та Гурвіца.
 
-    Аргументы:
-    - criteria_results: словарь с результатами критериев.
-    - title: заголовок графика.
+    Аргументи:
+    - criteria_results: словник із результатами критеріїв.
+    - title: заголовок графіка.
 
-    Возвращает:
-    - fig: интерактивный график.
+    Повертає:
+    - fig: інтерактивний графік.
     """
     fig = go.Figure()
 
@@ -235,21 +233,21 @@ def plot_criteria_results(criteria_results, title="Риск и доходнос�
 
     fig.update_layout(
         title=title,
-        xaxis_title="Альтернативы",
-        yaxis_title="Значения",
+        xaxis_title="Альтернативи",
+        yaxis_title="Значення",
         barmode="group",
         template="plotly_white",
         xaxis=dict(
             showgrid=True,
-            title="Альтернативы",
+            title="Альтернативи",
             tickangle=45,
             tickfont=dict(size=10),
-            fixedrange=False  # Отключает фиксированный масштаб
+            fixedrange=False  # Вимкнення фіксованого масштабу
         ),
         yaxis=dict(
             showgrid=True,
-            title="Значения",
-            fixedrange=False  # Отключает фиксированный масштаб
+            title="Значення",
+            fixedrange=False  # Вимкнення фіксованого масштабу
         ),
         legend=dict(
             orientation="h",
@@ -264,66 +262,65 @@ def plot_criteria_results(criteria_results, title="Риск и доходнос�
 
 def plot_long_short(data_long, data_short, pair):
     """
-    Построение графика долгосрочных и краткосрочных данных с аннотацией.
+    Побудова графіка довгострокових і короткострокових даних із анотаціями.
 
-    Параметры:
-    - data_long: DataFrame долгосрочных данных.
-    - data_short: DataFrame краткосрочных данных.
-    - pair: Название пары.
+    Параметри:
+    - data_long: DataFrame довгострокових даних.
+    - data_short: DataFrame короткострокових даних.
+    - pair: Назва пари.
 
-    Возвращает:
-    - fig: Объект Plotly Figure.
+    Повертає:
+    - fig: Об'єкт Plotly Figure.
     """
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Долгосрочный тренд
+    # Довгостроковий тренд
     fig.add_trace(
         go.Scatter(
             x=data_long["open_time"],
             y=data_long["close"],
             mode="lines",
-            name="Долгосрочный тренд",
+            name="Довгостроковий тренд",
             line=dict(color="blue")
         ),
         secondary_y=False,
     )
 
-    # Краткосрочный тренд
+    # Короткостроковий тренд
     fig.add_trace(
         go.Scatter(
             x=data_short["open_time"],
             y=data_short["close"],
             mode="lines",
-            name="Краткосрочный тренд",
+            name="Короткостроковий тренд",
             line=dict(color="orange")
         ),
         secondary_y=True,
     )
 
-    # Настройка осей
+    # Налаштування осей
     fig.update_xaxes(title_text="Дата")
-    fig.update_yaxes(title_text="Долгосрочная цена", secondary_y=False)
-    fig.update_yaxes(title_text="Краткосрочная цена", secondary_y=True)
+    fig.update_yaxes(title_text="Довгострокова ціна", secondary_y=False)
+    fig.update_yaxes(title_text="Короткострокова ціна", secondary_y=True)
 
-    # Настройки графика
+    # Налаштування графіка
     fig.update_layout(
-        title=f"Долгосрочные и краткосрочные тренды для {pair}",
+        title=f"Довгострокові та короткострокові тренди для {pair}",
         template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
     return fig
 
-
-def plot_bayesian_probabilities(probabilities, title="Байесовские вероятности"):
+def plot_bayesian_probabilities(probabilities, title="Байєсівські ймовірності"):
     """
-    Визуализация байесовских вероятностей.
+    Візуалізація байєсівських ймовірностей.
 
-    :param probabilities: Словарь вероятностей {'label': value}.
-    :param title: Заголовок графика.
-    :return: Объект Plotly Figure.
+    :param probabilities: Словник ймовірностей {'label': value}.
+    :param title: Заголовок графіка.
+    :return: Об'єкт Plotly Figure.
     """
-    # Разделение словаря на метки и значения
+    # Розділення словника на мітки та значення
     labels = list(probabilities.keys())
     values = list(probabilities.values())
 
@@ -331,30 +328,30 @@ def plot_bayesian_probabilities(probabilities, title="Байесовские в�
     fig.add_trace(go.Bar(
         x=labels,
         y=values,
-        name="Вероятности",
+        name="Ймовірності",
         marker_color="blue"
     ))
 
     fig.update_layout(
         title=title,
-        xaxis_title="Категории",
-        yaxis_title="Вероятность",
+        xaxis_title="Категорії",
+        yaxis_title="Ймовірність",
         template="plotly_white",
         showlegend=False
     )
 
     return fig
 
-def plot_criteria_results(criteria_results, title="Результаты оценки"):
+def plot_criteria_results(criteria_results, title="Результати оцінки"):
     """
-    Построение графика результатов различных критериев.
+    Побудова графіка результатів різних критеріїв.
 
-    Параметры:
-    - criteria_results (dict): Словарь, где ключи - названия критериев, значения - результаты (Series).
-    - title (str): Заголовок графика.
+    Параметри:
+    - criteria_results (dict): Словник, де ключі - назви критеріїв, значення - результати (Series).
+    - title (str): Заголовок графіка.
 
-    Возвращает:
-    - fig (Figure): Объект графика Plotly.
+    Повертає:
+    - fig (Figure): Об'єкт графіка Plotly.
     """
     fig = go.Figure()
 
@@ -367,84 +364,80 @@ def plot_criteria_results(criteria_results, title="Результаты оцен
 
     fig.update_layout(
         title=title,
-        xaxis_title="Альтернативы",
-        yaxis_title="Значения",
+        xaxis_title="Альтернативи",
+        yaxis_title="Значення",
         template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     return fig
 
-
 def plot_risk_zones(data, atr_threshold):
     """
-    Построение графика с зонами риска на основе ATR.
+    Побудова графіка із зонами ризику на основі ATR.
 
-    :param data: DataFrame с данными.
-    :param atr_threshold: Пороговое значение ATR для определения зон риска.
-    :return: График Plotly.
+    :param data: DataFrame із даними.
+    :param atr_threshold: Порогове значення ATR для визначення зон ризику.
+    :return: Графік Plotly.
     """
-    import plotly.graph_objects as go
-
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['open_time'], y=data['close'], mode='lines', name='Цена'))
+    fig.add_trace(go.Scatter(x=data['open_time'], y=data['close'], mode='lines', name='Ціна'))
 
-    # Добавляем зоны риска
+    # Додаємо зони ризику
     high_risk = data['ATR'] > atr_threshold
     fig.add_trace(go.Scatter(
         x=data.loc[high_risk, 'open_time'],
         y=data.loc[high_risk, 'close'],
         mode='markers',
         marker=dict(color='red', size=6),
-        name='Высокий риск'
+        name='Високий ризик'
     ))
 
     fig.update_layout(
-        title="Зоны риска на основе ATR",
+        title="Зони ризику на основі ATR",
         xaxis_title="Дата",
-        yaxis_title="Цена",
+        yaxis_title="Ціна",
         template="plotly_white"
     )
     return fig
 
-def plot_trends(data, title="Анализ трендов"):
+def plot_trends(data, title="Аналіз трендів"):
     """
-    Отображает график цен с цветовым выделением трендов.
+    Відображає графік цін із кольоровим виділенням трендів.
     """
     fig = go.Figure()
 
-    # Восходящий тренд
+    # Висхідний тренд
     up_trend = data[data["trend"] == "up"]
     fig.add_trace(go.Scatter(
         x=up_trend["open_time"],
         y=up_trend["close"],
         mode="lines",
         line=dict(color="green"),
-        name="Восходящий тренд"
+        name="Висхідний тренд"
     ))
 
-    # Нисходящий тренд
+    # Низхідний тренд
     down_trend = data[data["trend"] == "down"]
     fig.add_trace(go.Scatter(
         x=down_trend["open_time"],
         y=down_trend["close"],
         mode="lines",
         line=dict(color="red"),
-        name="Нисходящий тренд"
+        name="Низхідний тренд"
     ))
 
     fig.update_layout(
         title=title,
         xaxis_title="Дата",
-        yaxis_title="Цена",
+        yaxis_title="Ціна",
         template="plotly_white"
     )
     return fig
 
-
-def display_table(data, title="Таблица данных"):
-    """Отображение таблицы данных."""
+def display_table(data, title="Таблиця даних"):
+    """Відображення таблиці даних."""
     if data.empty:
-        st.warning("Данные отсутствуют.")
+        st.warning("Дані відсутні.")
         return
     st.subheader(title)
     st.dataframe(data)
